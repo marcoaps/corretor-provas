@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Corretor de Provas</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f4f6f9;
+    display: flex;
+    justify-content: center;
+    padding: 40px;
+}
+
+.container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 450px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+}
+
+input, button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+button {
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+.resultado, .historico {
+    margin-top: 20px;
+    padding: 10px;
+    background: #e9ecef;
+    border-radius: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h1>📋 Corretor de Provas</h1>
+
+<input type="text" id="nome" placeholder="Nome do aluno">
+<input type="text" id="gabarito" placeholder="A,B,A,C,D,B,A,C">
+<input type="file" id="file">
+
+<button onclick="corrigir()">Corrigir Prova</button>
+<button onclick="verHistorico()">Ver Histórico</button>
+
+<div class="resultado" id="resultado"></div>
+<div class="historico" id="historico"></div>
+</div>
+
+<script>
+async function corrigir() {
+    const nome = document.getElementById("nome").value;
+    const gabarito = document.getElementById("gabarito").value;
+    const file = document.getElementById("file").files[0];
+
+    const resProva = await fetch(`http://127.0.0.1:8000/criar-prova/?nome=${nome}&gabarito=${gabarito}`, {
+        method: "POST"
+    });
+
+    const dataProva = await resProva.json();
+    const prova_id = dataProva.prova_id;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const resCorrigir = await fetch(`http://127.0.0.1:8000/corrigir/${prova_id}`, {
+        method: "POST",
+        body: formData
+    });
+
+    const resultado = await resCorrigir.json();
+
+    document.getElementById("resultado").innerHTML = `
+        <h3>Resultado</h3>
+        Nota: ${resultado.nota} / ${resultado.total}<br>
+        Respostas: ${resultado.respostas_detectadas.join(", ")}
+    `;
+}
+
+async function verHistorico() {
+    const res = await fetch("http://127.0.0.1:8000/provas/");
+    const data = await res.json();
+
+    let html = "<h3>Histórico</h3>";
+
+    data.forEach(p => {
+        html += `
+            <p>
+            <strong>${p.nome}</strong><br>
+            Nota: ${p.nota}/${p.total}<br>
+            Respostas: ${p.respostas}
+            </p>
+            <hr>
+        `;
+    });
+
+    document.getElementById("historico").innerHTML = html;
+}
+</script>
+
+</body>
+</html>
